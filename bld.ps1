@@ -29,31 +29,22 @@ Function DeGZip-File{
 # Allow us to access System.IO.Compression.GzipStream
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-# $stage_temp = [System.Guid]::NewGuid().ToString()
-# Set-Location $ENV:Temp
-# New-Item -Type Directory -Name $stage_temp
-# $stage = "$($ENV:Temp)\$($stage_temp)"
-# $stage = "C:\Users\smc\AppData\Local\Temp\089ecb48-75ff-42b3-94e6-c707f76566d3"
 $stage = "$($Env:PREFIX)"
 
-# Set up vcpkg and ensure modules are installed
-Set-Location C:\tools\vcpkg
-git rev-parse HEAD
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-git checkout $env:VCPKG_COMMIT
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-.\bootstrap-vcpkg.bat
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-vcpkg integrate install
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-vcpkg install boost-filesystem:x64-windows-static boost-program-options:x64-windows-static boost-thread:x64-windows-static boost-python:x64-windows-static eigen3:x64-windows-static boost-dll:x64-windows-static
-if ($LastExitCode -ne 0) { exit $LastExitCode }
+# # Set up vcpkg and ensure modules are installed
+# Set-Location C:\tools\vcpkg
+# git rev-parse HEAD
+# if ($LastExitCode -ne 0) { exit $LastExitCode }
+# git checkout $env:VCPKG_COMMIT
+# if ($LastExitCode -ne 0) { exit $LastExitCode }
+# .\bootstrap-vcpkg.bat
+# if ($LastExitCode -ne 0) { exit $LastExitCode }
+# vcpkg integrate install
+# if ($LastExitCode -ne 0) { exit $LastExitCode }
+# vcpkg install boost-filesystem:x64-windows-static boost-program-options:x64-windows-static boost-thread:x64-windows-static boost-python:x64-windows-static eigen3:x64-windows-static boost-dll:x64-windows-static
+# if ($LastExitCode -ne 0) { exit $LastExitCode }
 
-# # Create conda Python environment
-# conda create -y -n nextpnr-ecp5-build python=3.7.3
-# if ($LastExitCode -ne 0) { exit $LastExitCode }
-# conda activate nextpnr-ecp5-build
-# if ($LastExitCode -ne 0) { exit $LastExitCode }
+# Validate conda Python environment
 python -V
 if ($LastExitCode -ne 0) { exit $LastExitCode }
 python -c 'import sys; print(sys.path)'
@@ -62,52 +53,20 @@ if ($LastExitCode -ne 0) { exit $LastExitCode }
 # Extract the chipdb files to the source file directory.
 # These files contain lots of redundant information, so we must compress them to fit them
 # in the git repositry.
-Set-Location $env:SRC_DIR\chipdb
-DeGZip-File "$($env:SRC_DIR)\chipdb\chipdb-25k.bba.gz" "$($env:SRC_DIR)\chipdb\chipdb-25k.bba"
-DeGZip-File "$($env:SRC_DIR)\chipdb\chipdb-45k.bba.gz" "$($env:SRC_DIR)\chipdb\chipdb-45k.bba"
-DeGZip-File "$($env:SRC_DIR)\chipdb\chipdb-85k.bba.gz" "$($env:SRC_DIR)\chipdb\chipdb-85k.bba"
-
-# Check out (and build) prjtrellis
-Write-Output ""
-Set-Location $env:SRC_DIR
-if (!(Test-Path "prjtrellis")) {
-    git clone $env:PRJTRELLIS_URI prjtrellis
-    if ($LastExitCode -ne 0) { exit $LastExitCode }
-}
-git -C prjtrellis checkout $env:PRJTRELLIS_COMMIT
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-git -C prjtrellis submodule init
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-git -C prjtrellis submodule update
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-git -C prjtrellis log -1
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-
-# Configure and build libtrellis, which includes the various bitstream manipulation
-# programs such as ecpmulti and ecppack.
-Set-Location $env:SRC_DIR\prjtrellis\libtrellis
-cmake -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" -A "x64" -DBUILD_SHARED=OFF -DSTATIC_BUILD=ON "-DCMAKE_INSTALL_PREFIX=$stage" .
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-cmake --build . --target install --config Release
-if ($LastExitCode -ne 0) { exit $LastExitCode }
+Set-Location $env:RECIPE_DIR\chipdb
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-25k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-25k.bba"
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-45k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-45k.bba"
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-85k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-85k.bba"
+$chipdb = "$($env:RECIPE_DIR.replace("\", "/"))/chipdb"
 
 Write-Output ""
 Set-Location $env:SRC_DIR
-if (!(Test-Path "nextpnr")) {
-    git clone $env:NEXTPNR_URI nextpnr
-    if ($LastExitCode -ne 0) { exit $LastExitCode }
-}
-git -C nextpnr checkout $env:NEXTPNR_COMMIT
-if ($LastExitCode -ne 0) { exit $LastExitCode }
-git -C nextpnr log -1
-if ($LastExitCode -ne 0) { exit $LastExitCode }
 
 # cmake requires we use forward slashes, so patch up various environment variables
 # to use forward slashes.
-Set-Location $env:SRC_DIR\nextpnr
-$prjtrellis = "$($env:SRC_DIR.replace("\", "/"))/prjtrellis"
-$libtrellis = "$($env:SRC_DIR.replace("\", "/"))/prjtrellis/libtrellis/release"
-$chipdb = "$($env:SRC_DIR.replace("\", "/"))/chipdb"
+Get-ChildItem $Env:LIBRARY_PREFIX
+$prjtrellis = "$($env:LIBRARY_PREFIX.replace("\", "/"))/share/trellis"
+$libtrellis = "$($env:LIBRARY_PREFIX.replace("\", "/"))/share/trellis/libtrellis/release"
 cmake -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DARCH=ecp5 "-DTRELLIS_ROOT=$prjtrellis" "-DPYTRELLIS_LIBDIR=$libtrellis" "-DPREGENERATED_BBA_PATH=$chipdb" "-DCMAKE_INSTALL_PREFIX=$stage" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" -A "x64" -DSTATIC_BUILD=ON -DBUILD_GUI=OFF .
 if ($LastExitCode -ne 0) { exit $LastExitCode }
 cmake --build . --target install --config Release

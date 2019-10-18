@@ -1,13 +1,12 @@
-# {% set version = '%s_%04i_%s'|format(GIT_DESCRIBE_TAG|replace('v', '') or '0.X.X', GIT_DESCRIBE_NUMBER|int, GIT_DESCRIBE_HASH or 'gUNKNOWN') %}
+{% set version = '%s_%04i_%s'|format('0.X.X', 0, 'gUNKNOWN') %}
 
 package:
   name: nextpnr-ecp5
-  version: {{ "v0.0.1" }}
+  version: {{ version }}
 
 source:
-  path: .
-  # git_url: https://github.com/timvideos/nextpnr.git
-  # git_rev: master
+  git_url: https://github.com/YosysHQ/nextpnr.git
+  git_rev: master
 
 build:
   # number: 201803050325
@@ -22,12 +21,13 @@ requirements:
   build:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
-    - python 3.7.3
+    - python 3.7.*
+    - prjtrellis
   host:
     - cmake
-    - python 3.7
+    - python 3.7.*
   run:
-    - python 3.7.3
+    - python 3.7.*
 
 test:
   commands:
