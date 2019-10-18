@@ -1,0 +1,40 @@
+# {% set version = '%s_%04i_%s'|format(GIT_DESCRIBE_TAG|replace('v', '') or '0.X.X', GIT_DESCRIBE_NUMBER|int, GIT_DESCRIBE_HASH or 'gUNKNOWN') %}
+
+package:
+  name: nextpnr-ecp5
+  version: {{ "v0.0.1" }}
+
+source:
+  path: .
+  # git_url: https://github.com/timvideos/nextpnr.git
+  # git_rev: master
+
+build:
+  # number: 201803050325
+  number: {{ environ.get('DATE_NUM') }}
+  # string: 20180305_0325
+  string: {{ environ.get('DATE_STR') }}
+  script_env:
+    - CI
+    - TRAVIS
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - python 3.7.3
+  host:
+    - cmake
+    - python 3.7
+  run:
+    - python 3.7.3
+
+test:
+  commands:
+    - nextpnr-ecp5 -V
+
+about:
+  home: https://github.com/YosysHQ/nextpnr
+  license: ISC
+  license_file: COPYING
+  summary: 'nextpnr aims to be a vendor neutral, timing driven, FOSS FPGA place and route tool.'
