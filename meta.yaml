@@ -24,7 +24,7 @@ requirements:
     - python 3.7.*
     - prjtrellis
     - boost
-    - eigen
+    - conda-forge:eigen
   host:
     - cmake
     - python 3.7.*
