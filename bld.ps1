@@ -31,8 +31,10 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $stage = "$($Env:PREFIX)"
 
+# $vcpkg_path = "D:\code\vcpkg"
+# # $vcpkg_path = "C:\tools\vcpkg"
 # # Set up vcpkg and ensure modules are installed
-# Set-Location C:\tools\vcpkg
+# Set-Location $vcpkg_path
 # git rev-parse HEAD
 # if ($LastExitCode -ne 0) { exit $LastExitCode }
 # git checkout $env:VCPKG_COMMIT
@@ -53,33 +55,34 @@ if ($LastExitCode -ne 0) { exit $LastExitCode }
 # Extract the chipdb files to the source file directory.
 # These files contain lots of redundant information, so we must compress them to fit them
 # in the git repositry.
-Set-Location $env:RECIPE_DIR\chipdb
-DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-25k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-25k.bba"
-DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-45k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-45k.bba"
-DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-85k.bba.gz" "$($env:RECIPE_DIR)\chipdb\chipdb-85k.bba"
-$chipdb = "$($env:RECIPE_DIR.replace("\", "/"))/chipdb"
+mkdir $env:SRC_DIR\chipdb-extract
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-25k.bba.gz" "$($env:SRC_DIR)\chipdb-extract\chipdb-25k.bba"
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-45k.bba.gz" "$($env:SRC_DIR)\chipdb-extract\chipdb-45k.bba"
+DeGZip-File "$($env:RECIPE_DIR)\chipdb\chipdb-85k.bba.gz" "$($env:SRC_DIR)\chipdb-extract\chipdb-85k.bba"
+$chipdb = "$($env:SRC_DIR.replace("\", "/"))/chipdb-extract"
 
 Write-Output ""
 Set-Location $env:SRC_DIR
+
+$compiler = "Visual Studio 16 2019"
+$arch = ""
+If ($true) {
+    $compiler = "Visual Studio 15 2017"
+    $arch = ""
+} else {
+    $compiler = "Visual Studio 16 2019"
+    $arch = "-A x64"
+}
+
+# cmake "-DCMAKE_TOOLCHAIN_FILE=$($vcpkg_path.replace("\", "/"))/scripts/buildsystems/vcpkg.cmake" -DARCH=ecp5 "-DTRELLIS_ROOT=$prjtrellis" "-DPYTRELLIS_LIBDIR=$libtrellis" "-DPREGENERATED_BBA_PATH=$chipdb" "-DCMAKE_INSTALL_PREFIX=$stage" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" -A "x64" -DSTATIC_BUILD=ON -DBUILD_GUI=OFF .
+
 
 # cmake requires we use forward slashes, so patch up various environment variables
 # to use forward slashes.
 Get-ChildItem $Env:LIBRARY_PREFIX
 $prjtrellis = "$($env:LIBRARY_PREFIX.replace("\", "/"))/share/trellis"
 $libtrellis = "$($env:LIBRARY_PREFIX.replace("\", "/"))/share/trellis/libtrellis/release"
-cmake -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake -DARCH=ecp5 "-DTRELLIS_ROOT=$prjtrellis" "-DPYTRELLIS_LIBDIR=$libtrellis" "-DPREGENERATED_BBA_PATH=$chipdb" "-DCMAKE_INSTALL_PREFIX=$stage" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 16 2019" -A "x64" -DSTATIC_BUILD=ON -DBUILD_GUI=OFF .
+cmake "-DCMAKE_TOOLCHAIN_FILE=$($vcpkg_path.replace("\", "/"))/scripts/buildsystems/vcpkg.cmake" -DARCH=ecp5 "-DTRELLIS_ROOT=$prjtrellis" "-DPYTRELLIS_LIBDIR=$libtrellis" "-DPREGENERATED_BBA_PATH=$chipdb" "-DCMAKE_INSTALL_PREFIX=$stage" -DVCPKG_TARGET_TRIPLET=x64-windows-static -G "Visual Studio 15 2017" -A "x64" -DSTATIC_BUILD=ON -DBUILD_GUI=OFF .
 if ($LastExitCode -ne 0) { exit $LastExitCode }
 cmake --build . --target install --config Release
 if ($LastExitCode -ne 0) { exit $LastExitCode }
-
-# # Now that everything is built and installed, package it up.
-# Set-Location $stage
-# $zip = "$ENV:Temp\nextpnr-ecp5-windows_amd64-$($ENV:APPVEYOR_REPO_TAG_NAME).zip"
-# [System.IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
-
-# # Publish the resulting zipfile.
-# Push-AppveyorArtifact "$zip"
-# Set-Location $env:SRC_DIR
-# Remove-Item -Recurse -Force $stage
-# Remove-Item -Recurse -Force $zip
-# conda env remove --name nextpnr-ecp5-build

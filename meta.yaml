@@ -23,6 +23,8 @@ requirements:
     - {{ compiler('cxx') }}
     - python 3.7.*
     - prjtrellis
+    - boost
+    - eigen
   host:
     - cmake
     - python 3.7.*
